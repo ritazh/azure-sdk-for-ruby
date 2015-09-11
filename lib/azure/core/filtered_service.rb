@@ -29,8 +29,8 @@ module Azure
 
       attr_accessor :filters
 
-      def call(method, uri, body=nil, headers=nil)
-        super(method, uri, body, headers) do |request|
+      def call(method, uri, body=nil, headers=nil, client_timeout=nil)
+        super(method, uri, body, headers, client_timeout) do |request|
           filters.each { |filter| request.with_filter filter } if filters
         end
       end

@@ -28,7 +28,7 @@ module Azure
 
       attr_accessor :host
 
-      def call(method, uri, body=nil, headers=nil)
+      def call(method, uri, body=nil, headers=nil, client_timeout=nil)
         if headers && !body.nil?
           if headers['Content-Encoding'].nil?
             headers['Content-Encoding'] = body.encoding.to_s
@@ -39,6 +39,7 @@ module Azure
 
         request = Core::Http::HttpRequest.new(method, uri, body)
         request.headers.merge!(headers) if headers
+        request.client_timeout if client_timeout
 
         request.headers['connection'] = 'keep-alive' if request.respond_to? :headers
 

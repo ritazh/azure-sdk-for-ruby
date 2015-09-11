@@ -41,6 +41,11 @@ module Azure
         # The body of the request (IO or String)
         attr_accessor :body
 
+        # The client timeout value of the request (Integer)
+        attr_accessor :client_timeout
+
+        ThreadFlag = Struct.new(:finish, :fail, :message)
+
         # Public: Create the HttpRequest
         #
         # method - Symbol. The HTTP method to use (:get, :post, :put, :del, etc...)
@@ -52,6 +57,7 @@ module Azure
           @uri     = uri
           @body    = body
           @headers = {}
+          @client_timeout = nil
 
           default_headers current_time
         end
@@ -128,6 +134,35 @@ module Azure
           request.body = body if body
 
           http = nil
+          connection_complete_flag = ThreadFlag.new(false, false, nil)
+          thread = Thread.current
+
+          # should only be called when a client_timeout value has been provided
+          if client_timeout
+            puts "client_timeout"
+            puts client_timeout
+
+            t = Thread.new {
+              count = 0
+              while !connection_complete_flag.finish && count < client_timeout * 100 do
+                sleep(0.01)
+                count = count + 1
+              end
+              seconds = count / 100
+              puts "Timeout thread, slept #{seconds} seconds!"
+              if !connection_complete_flag.finish
+                puts "Timeout thread, timed out! let's end this thread and close this connection!"
+                thread.raise("failed to complete request in #{seconds} seconds")
+                begin
+                  http.finish
+                rescue IOError => e
+                  puts "handle http finish exception"
+                end
+                puts "Timeout thread, closed connection with finish!"
+              end
+            }
+          end
+          
           if ENV['HTTP_PROXY'] || ENV['HTTPS_PROXY']
             if ENV['HTTP_PROXY']
               proxy_uri = URI::parse(ENV['HTTP_PROXY'])
@@ -135,9 +170,9 @@ module Azure
               proxy_uri = URI::parse(ENV['HTTPS_PROXY'])
             end
 
-            http = Net::HTTP::Proxy(proxy_uri.host, proxy_uri.port).new(uri.host, uri.port)
+            http = Net::HTTP::Proxy(proxy_uri.host, proxy_uri.port).start(uri.host, uri.port)
           else
-            http = Net::HTTP.new(uri.host, uri.port)
+            http = Net::HTTP.start(uri.host, uri.port)
           end
 
           if uri.scheme.downcase == 'https'
@@ -148,6 +183,10 @@ module Azure
 
           response = HttpResponse.new(http.request(request))
           response.uri = uri
+          connection_complete_flag.finish = true
+          if client_timeout
+            t.join
+          end
           raise response.error unless response.success?
           response
         end

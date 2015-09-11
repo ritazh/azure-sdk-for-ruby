@@ -18,7 +18,7 @@ require "rubygems/package_task"
 gem_spec = eval(File.read("./azure.gemspec"))
 Gem::PackageTask.new(gem_spec) do |pkg|
   pkg.need_zip = false
-  pkg.need_tar = false
+  pkg.need_tar = true
 end
 
 namespace :test do
