@@ -59,6 +59,8 @@ module Azure
       #
       # * +:timeout+      - Integer. A timeout in seconds.
       #
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
+      #
       # NOTE: Metadata requested with the :metadata parameter must have been stored in
       # accordance with the naming restrictions imposed by the 2009-09-19 version of the Blob
       # service. Beginning with that version, all metadata names must adhere to the naming
@@ -73,16 +75,18 @@ module Azure
       # Returns an Azure::Service::EnumerationResults
       def list_containers(options={})
         query = { }
+        client_timeout = nil
         if options
           query['prefix'] = options[:prefix] if options[:prefix]
           query['marker'] = options[:marker] if options[:marker]
           query['maxresults'] = options[:max_results].to_s if options[:max_results]
           query['include'] = 'metadata' if options[:metadata] == true
           query['timeout'] = options[:timeout].to_s if options[:timeout]
+          client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
         end
 
         uri = containers_uri(query)
-        response = call(:get, uri)
+        response = call(:get, uri, nil, nil, client_timeout)
 
         Serialization.container_enumeration_results_from_xml(response.body)
       end
@@ -100,6 +104,7 @@ module Azure
       # * +:metadata+            - Hash. User defined metadata for the container (optional)
       # * +:public_access_level+ - String. One of "container" or "blob" (optional)
       # * +:timeout+             - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179468.aspx
       #
@@ -116,7 +121,10 @@ module Azure
 
         headers['x-ms-blob-public-access'] = options[:public_access_level].to_s if options[:public_access_level]
 
-        response = call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, nil, headers, client_timeout)
 
         container = Serialization.container_from_headers(response.headers)
         container.name = name
@@ -135,6 +143,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+   - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179408.aspx
       #
@@ -143,7 +152,10 @@ module Azure
         query = { }
         query['timeout'] = options[:timeout].to_s if options[:timeout]
 
-        call(:delete, container_uri(name, query))
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        call(:delete, container_uri(name, query), nil, nil, client_timeout)
         nil
       end
 
@@ -158,6 +170,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+   - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179370.aspx
       #
@@ -166,7 +179,10 @@ module Azure
         query = { }
         query['timeout'] = options[:timeout].to_s if options[:timeout]
 
-        response = call(:get, container_uri(name, query))
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:get, container_uri(name, query), nil, nil, client_timeout)
 
         container = Serialization.container_from_headers(response.headers)
         container.name = name
@@ -184,6 +200,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+   - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691976.aspx
       #
@@ -192,7 +209,10 @@ module Azure
         query = { 'comp' => 'metadata'}
         query['timeout'] = options[:timeout].to_s if options[:timeout]
 
-        response = call(:get, container_uri(name, query))
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:get, container_uri(name, query), nil, nil, client_timeout)
 
         container = Serialization.container_from_headers(response.headers)
         container.name = name
@@ -211,6 +231,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+   - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179469.aspx
       #
@@ -221,7 +242,11 @@ module Azure
       def get_container_acl(name, options={})
         query = { 'comp' => 'acl'}
         query['timeout'] = options[:timeout].to_s if options[:timeout]
-        response = call(:get, container_uri(name, query))
+
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:get, container_uri(name, query), nil, nil, client_timeout)
 
         container = Serialization.container_from_headers(response.headers)
         container.name = name
@@ -245,6 +270,7 @@ module Azure
       # Accepted key/value pairs in options parameter are:
       # * +:signed_identifiers+          - Array. A list of Azure::Entity::SignedIdentifier instances (optional)
       # * +:timeout+                     - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179391.aspx
       #
@@ -266,7 +292,10 @@ module Azure
         body = nil
         body = Serialization.signed_identifiers_to_xml(signed_identifiers) if signed_identifiers
 
-        response = call(:put, uri, body, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+        
+        response = call(:put, uri, body, headers, client_timeout)
 
         container = Serialization.container_from_headers(response.headers)
         container.name = name
@@ -288,6 +317,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+  - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179362.aspx
       #
@@ -299,7 +329,10 @@ module Azure
         headers = service_properties_headers
         add_metadata_to_headers(metadata, headers) if metadata
 
-        call(:put, container_uri(name, query), nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        call(:put, container_uri(name, query), nil, headers, client_timeout)
         nil
       end
 
@@ -343,6 +376,7 @@ module Azure
       #   copy_blob operation should be included in the response.
       #   (optional, Default=false)
       # * +:timeout+          - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # NOTE: Metadata requested with the :metadata parameter must have been stored in
       # accordance with the naming restrictions imposed by the 2009-09-19 version of the Blob
@@ -372,8 +406,11 @@ module Azure
 
         query['include'] = included_datasets.join ',' if included_datasets.length > 0
 
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
         uri = container_uri(name, query)
-        response = call(:get, uri)
+        response = call(:get, uri, nil, nil, client_timeout)
 
         Serialization.blob_enumeration_results_from_xml(response.body)
       end
@@ -404,6 +441,7 @@ module Azure
       # * +:metadata+              - Hash. Custom metadata values to store with the blob.
       # * +:sequence_number+       - Integer. The sequence number is a user-controlled value that you can use to track requests. The value of the sequence number must be between 0 and 2^63 - 1.The default value is 0.
       # * +:timeout+               - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179451.aspx
       #
@@ -441,8 +479,11 @@ module Azure
 
         add_metadata_to_headers(options[:metadata], headers) if options[:metadata]
 
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
         # call PutBlob with empty body
-        response = call(:put, uri, nil, headers)
+        response = call(:put, uri, nil, headers, client_timeout)
 
         result = Serialization.blob_from_headers(response.headers)
         result.name = blob
@@ -472,6 +513,7 @@ module Azure
       # * +:if_match+               - An ETag value. Specify an ETag value for this conditional header to write the page only if the blob's ETag value matches the value specified. If the values do not match, the Blob service returns status code 412 (Precondition Failed).
       # * +:if_none_match+          - An ETag value. Specify an ETag value for this conditional header to write the page only if the blob's ETag value does not match the value specified. If the values are identical, the Blob service returns status code 412 (Precondition Failed).
       # * +:timeout+                - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691975.aspx
       #
@@ -499,7 +541,10 @@ module Azure
           headers['If-None-Match'] = options[:if_none_match] if options[:if_none_match]
         end
 
-        response = call(:put, uri, content, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, content, headers, client_timeout)
 
         result = Serialization.blob_from_headers(response.headers)
         result.name = blob
@@ -521,6 +566,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+     - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691975.aspx
       #
@@ -538,7 +584,10 @@ module Azure
         # clear default content type
         headers['Content-Type'] = ''
 
-        response = call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, nil, headers, client_timeout)
 
         result = Serialization.blob_from_headers(response.headers)
         result.name = blob
@@ -578,6 +627,7 @@ module Azure
       # * +:blob_cache_control+    - String. Cache control for the blob. Will be saved with blob.
       # * +:metadata+              - Hash. Custom metadata values to store with the blob.
       # * +:timeout+               - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179451.aspx
       #
@@ -609,8 +659,11 @@ module Azure
 
         add_metadata_to_headers(options[:metadata], headers) if options[:metadata]
 
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
         # call PutBlob with empty body
-        response = call(:put, uri, content, headers)
+        response = call(:put, uri, content, headers, client_timeout)
 
         result = Serialization.blob_from_headers(response.headers)
         result.name = blob
@@ -633,6 +686,7 @@ module Azure
       # Accepted key/value pairs in options parameter are:
       # * +:content_md5+           - String. Content MD5 for the request contents.
       # * +:timeout+               - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd135726.aspx
       #
@@ -647,7 +701,10 @@ module Azure
         headers = service_properties_headers
         headers['Content-MD5'] = options[:content_md5] if options[:content_md5]
 
-        response = call(:put, uri, content, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, content, headers, client_timeout)
 
         response.headers['Content-MD5']
       end
@@ -686,6 +743,7 @@ module Azure
       # * +:blob_cache_control+    - String. Cache control for the blob. Will be saved with blob.
       # * +:metadata+              - Hash. Custom metadata values to store with the blob.
       # * +:timeout+               - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179467.aspx
       #
@@ -710,7 +768,11 @@ module Azure
         end
 
         body = Serialization.block_list_to_xml(block_list)
-        call(:put, uri, body, headers)
+
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        call(:put, uri, body, headers, client_timeout)
         nil
       end
 
@@ -737,6 +799,7 @@ module Azure
       # * +:snapshot+       - String. An opaque DateTime value that specifies the blob snapshot to
       #   retrieve information from. (optional)
       # * +:timeout+        - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179400.aspx
       #
@@ -752,7 +815,10 @@ module Azure
 
         uri = blob_uri(container, blob, query)
 
-        response = call(:get, uri)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:get, uri, nil, nil, client_timeout)
 
         Serialization.block_list_from_xml(response.body)
       end
@@ -771,6 +837,7 @@ module Azure
       # * +:snapshot+      - String. An opaque DateTime value that specifies the blob snapshot to
       #   retrieve information from.
       # * +:timeout+       - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179394.aspx
       #
@@ -782,7 +849,10 @@ module Azure
 
         uri = blob_uri(container, blob, query)
 
-        response = call(:head, uri)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:head, uri, nil, nil, client_timeout)
 
         result = Serialization.blob_from_headers(response.headers)
 
@@ -806,6 +876,7 @@ module Azure
       # * +:snapshot+      - String. An opaque DateTime value that specifies the blob snapshot to
       #   retrieve information from.
       # * +:timeout+       - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179350.aspx
       #
@@ -817,7 +888,10 @@ module Azure
 
         uri = blob_uri(container, blob, query)
 
-        response = call(:get, uri)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:get, uri, nil, nil, client_timeout)
 
         result = Serialization.blob_from_headers(response.headers)
 
@@ -844,6 +918,7 @@ module Azure
       # * +:snapshot+       - String. An opaque DateTime value that specifies the blob snapshot to
       #   retrieve information from. (optional)
       # * +:timeout+        - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691973.aspx
       #
@@ -863,7 +938,10 @@ module Azure
         headers = service_properties_headers
         headers = { 'x-ms-range' =>  "bytes=#{options[:start_range]}-#{options[:end_range]}" } if options[:start_range]
 
-        response = call(:get, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:get, uri, nil, headers, client_timeout)
 
         pagelist = Serialization.page_list_from_xml(response.body)
         pagelist
@@ -917,6 +995,7 @@ module Azure
       #   To set the sequence number to a value of your choosing, this property must be specified
       #   together with :sequence_number_action
       # * +:timeout+                  - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # Remarks:
       #
@@ -965,7 +1044,10 @@ module Azure
           headers['x-ms-blob-content-disposition'] = options[:blob_content_disposition] if options[:blob_content_disposition]
         end
 
-        call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        call(:put, uri, nil, headers, client_timeout)
         nil
       end
 
@@ -982,6 +1064,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+       - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179414.aspx
       #
@@ -995,7 +1078,10 @@ module Azure
 
         add_metadata_to_headers(metadata, headers) if metadata
 
-        call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        call(:put, uri, nil, headers, client_timeout)
         nil
       end
 
@@ -1017,6 +1103,7 @@ module Azure
       # * +:get_content_md5+ - Boolean. Return the MD5 hash for the range. This option only valid if
       #   start_range and end_range are specified. (optional)
       # * +:timeout+         - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179440.aspx
       #
@@ -1034,7 +1121,10 @@ module Azure
           headers['x-ms-range-get-content-md5'] = true if options[:get_content_md5]
         end
 
-        response = call(:get, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:get, uri, nil, headers, client_timeout)
         result = Serialization.blob_from_headers(response.headers)
         result.name = blob unless result.name
         return result, response.body
@@ -1061,6 +1151,7 @@ module Azure
       #   * +:only+     - Deletes only the snapshots for the blob, but leaves the blob
       #   * +:include+  - Deletes the blob and all of the snapshots for the blob
       # * +:timeout+           - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd179440.aspx
       #
@@ -1077,7 +1168,10 @@ module Azure
         headers = service_properties_headers
         headers['x-ms-delete-snapshots'] = options[:delete_snapshots].to_s if options[:delete_snapshots] && options[:snapshot] == nil
 
-        call(:delete, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        call(:delete, uri, nil, headers, client_timeout)
         nil
       end
 
@@ -1106,6 +1200,7 @@ module Azure
       #   value does not match the value specified. If the values are identical, the Blob
       #   service returns status code 412 (Precondition Failed).
       # * +:timeout+                  - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691971.aspx
       #
@@ -1126,7 +1221,10 @@ module Azure
           headers['If-None-Match'] = options[:if_none_match] if options[:if_none_match]
         end
 
-        response = call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, nil, headers, client_timeout)
 
         response.headers['x-ms-snapshot']
       end
@@ -1174,6 +1272,7 @@ module Azure
       #   blob's ETag value does not match the value specified. If the values are
       #   identical, the Blob service returns status code 412 (Precondition Failed).
       # * +:timeout+                    - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/dd894037.aspx
       #
@@ -1206,7 +1305,10 @@ module Azure
           add_metadata_to_headers(options[:metadata], headers) if options[:metadata]
         end
 
-        response = call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, nil, headers, client_timeout)
         return response.headers['x-ms-copy-id'], response.headers['x-ms-copy-status']
       end
 
@@ -1227,6 +1329,7 @@ module Azure
       # * +:proposed_lease_id+ - String. Proposed lease ID, in a GUID string format. The Blob service returns 400 (Invalid request)
       #   if the proposed lease ID is not in the correct format. (optional)
       # * +:timeout+           - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691972.aspx
       #
@@ -1248,7 +1351,10 @@ module Azure
         headers['x-ms-lease-duration'] = duration.to_s if duration
         headers['x-ms-proposed-lease-id'] = options[:proposed_lease_id] if options[:proposed_lease_id]
 
-        response = call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, nil, headers, client_timeout)
         response.headers['x-ms-lease-id']
       end
 
@@ -1268,6 +1374,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+          - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691972.aspx
       #
@@ -1282,7 +1389,10 @@ module Azure
         headers['x-ms-lease-action'] = 'renew'
         headers['x-ms-lease-id'] = lease
 
-        response = call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, nil, headers, client_timeout)
         response.headers['x-ms-lease-id']
       end
 
@@ -1301,6 +1411,7 @@ module Azure
       #
       # Accepted key/value pairs in options parameter are:
       # * +:timeout+          - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691972.aspx
       #
@@ -1315,7 +1426,10 @@ module Azure
         headers['x-ms-lease-action'] = 'release'
         headers['x-ms-lease-id'] = lease
 
-        call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        call(:put, uri, nil, headers, client_timeout)
         nil
       end
 
@@ -1346,6 +1460,7 @@ module Azure
       #   If this option is not used, a fixed-duration lease breaks after the remaining lease
       #   period elapses, and an infinite lease breaks immediately.
       # * +:timeout+          - Integer. A timeout in seconds.
+      # * +:client_timeout_secs+  - Integer. A client timeout in seconds.
       #
       # See http://msdn.microsoft.com/en-us/library/azure/ee691972.aspx
       #
@@ -1362,7 +1477,10 @@ module Azure
         headers['x-ms-lease-action'] = 'break'
         headers['x-ms-lease-break-period'] = options[:break_period].to_s if options[:break_period]
 
-        response = call(:put, uri, nil, headers)
+        client_timeout = nil
+        client_timeout = options[:client_timeout_secs].to_i if options[:client_timeout_secs]
+
+        response = call(:put, uri, nil, headers, client_timeout)
         response.headers['x-ms-lease-time'].to_i
       end
 

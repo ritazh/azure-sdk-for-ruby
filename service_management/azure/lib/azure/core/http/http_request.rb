@@ -45,6 +45,11 @@ module Azure
         # @return [Azure::Client]
         attr_accessor :client
 
+         # The client timeout value of the request (Integer)
+        attr_accessor :client_timeout
+
+        ThreadFlag = Struct.new(:finish, :fail, :message)
+
         # Public: Create the HttpRequest
         #
         # @param method   [Symbol] The HTTP method to use (:get, :post, :put, :del, etc...)
@@ -66,6 +71,8 @@ module Azure
 
           self.headers = default_headers(options[:current_time] || Time.now.httpdate).merge(options[:headers] || {})
           self.body = options[:body]
+
+          @client_timeout = options[:client_timeout]
         end
 
         # Public: Applies a HttpFilter to the HTTP Pipeline
@@ -145,8 +152,41 @@ module Azure
             req.headers = headers if headers
           end
 
+          connection_complete_flag = ThreadFlag.new(false, false, nil)
+          thread = Thread.current
+
+          # should only be called when a client_timeout value has been provided
+          if client_timeout
+            puts "client_timeout"
+            puts client_timeout
+
+            t = Thread.new {
+              count = 0
+              while !connection_complete_flag.finish && count < client_timeout * 100 do
+                sleep(0.01)
+                count = count + 1
+              end
+              seconds = count / 100
+              puts "Timeout thread, slept #{seconds} seconds!"
+              if !connection_complete_flag.finish
+                puts "Timeout thread, timed out! let's end this thread and close this connection!"
+                thread.raise("failed to complete request in #{seconds} seconds")
+                begin
+                  conn.finish
+                rescue IOError => e
+                  puts "handle http finish exception"
+                end
+                puts "Timeout thread, closed connection with finish!"
+              end
+            }
+          end
+
           response = HttpResponse.new(res)
           response.uri = uri
+          connection_complete_flag.finish = true
+          if client_timeout
+            t.join
+          end
           raise response.error unless response.success?
           response
         end

@@ -28,10 +28,10 @@ module Azure
         @client = options[:client] || Azure
       end
 
-      attr_accessor :host, :client
+      attr_accessor :host, :client, :client_timeout
 
-      def call(method, uri, body=nil, headers={})
-        request = Core::Http::HttpRequest.new(method, uri, body: body, headers: headers, client: @client)
+      def call(method, uri, body=nil, headers={}, client_timeout=nil)
+        request = Core::Http::HttpRequest.new(method, uri, body: body, headers: headers, client: @client, client_timeout: client_timeout)
         yield request if block_given?
         request.call
       end
